@@ -107,12 +107,10 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
     getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
     assertEquals(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED,getRes.state().status());
 
-    Flux<LoanProcViewModel.ViewRecord> viewRecordFlux =
+    LoanProcViewModel.ViewRecordList viewResList =
             componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
 
-    List<LoanProcViewModel.ViewRecord> viewResList = viewRecordFlux.collectList().block(timeout);
-
-    assertTrue(!viewResList.stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
   }
   @Test
   public void endToEndHappyPath() throws Exception {
