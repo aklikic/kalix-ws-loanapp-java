@@ -112,7 +112,7 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
 
     assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
   }
-
+  @Test
   public void endToEndHappyPath() throws Exception {
     var loanAppId = UUID.randomUUID().toString();
     var reviewerId = "99999";
@@ -127,25 +127,23 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
 
     Thread.sleep(2000);
 
-    Flux<LoanProcViewModel.ViewRecord> viewRecordFlux =
+    LoanProcViewModel.ViewRecordList viewResList =
             componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_READY_FOR_REVIEW.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
-    List<LoanProcViewModel.ViewRecord> viewResList = viewRecordFlux.collectList().block(timeout);
-    assertTrue(!viewResList.stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
 
     LoanProcApi.EmptyResponse procEmptyRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::approve).params(new LoanProcApi.ApproveRequest(reviewerId)).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
     assertEquals(LoanProcApi.EmptyResponse.of(),procEmptyRes);
 
     Thread.sleep(2000);
 
-    viewRecordFlux = componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
-    viewResList = viewRecordFlux.collectList().block(timeout);
-    assertTrue(!viewResList.stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
+    viewResList = componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
 
     logger.info("Sending get...");
     LoanAppApi.GetResponse getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanAppEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
     assertEquals(LoanAppDomain.LoanAppDomainStatus.STATUS_APPROVED,getRes.state().status());
   }
-
+  @Test
   public void endToEndHappyPathWithDecline() throws Exception {
     var loanAppId = UUID.randomUUID().toString();
     var reviewerId = "99999";
@@ -161,19 +159,17 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
 
     Thread.sleep(2000);
 
-    Flux<LoanProcViewModel.ViewRecord> viewRecordFlux =
+    LoanProcViewModel.ViewRecordList viewResList =
             componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_READY_FOR_REVIEW.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
-    List<LoanProcViewModel.ViewRecord> viewResList = viewRecordFlux.collectList().block(timeout);
-    assertTrue(!viewResList.stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
 
     LoanProcApi.EmptyResponse procEmptyRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::decline).params(new LoanProcApi.DeclineRequest(reviewerId,declineReason)).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
     assertEquals(LoanProcApi.EmptyResponse.of(),procEmptyRes);
 
     Thread.sleep(2000);
 
-    viewRecordFlux = componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_DECLINED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
-    viewResList = viewRecordFlux.collectList().block(timeout);
-    assertTrue(!viewResList.stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
+    viewResList = componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_DECLINED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
 
     logger.info("Sending get...");
     LoanAppApi.GetResponse getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanAppEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
