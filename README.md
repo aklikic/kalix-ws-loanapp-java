@@ -386,3 +386,24 @@ Get loan application:
 ```
 curl -XGET http://localhost:8080/loanapp/3 -H "Content-Type: application/json"
 ```
+
+# Timers
+## Action for managing timer for timeout
+1. Create `io.kx.loanproc.LoanProcTimeoutAction` class extending `Action`
+2. Add class level annotation `@Subscribe.EventSourcedEntity(value = LoanProcEntity.class, ignoreUnknown = true)`
+3. Inject `ComponentClient kalixClient` via constructor
+4. Implement `getTimerName` method
+5. Implement event handler methods for `onReadyForReview`, `onApproved` and `onDeclined`
+
+<i><b>Tip</b></i>: Check content in `timers-step-5` git branch
+## Create integration tests for eventing (end-to-end test)
+Update `io.kx.IntegrationTest` and add `endToEndProcessingDeclinedByTimeout` test
+<i><b>Tip</b></i>: Check content in `timers-step-5` git branch
+## Run integration test
+```
+mvn -Pit verify
+```
+## Package & Deploy
+```
+mvn deploy kalix:deploy
+```
