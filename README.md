@@ -169,7 +169,7 @@ loan-application-java                        50s    0          Ready         1.0
 **Note**: When deploying service for the first time it can take up to 1 minute for internal provisioning
 
 ## Test service in production
-1. Proxy connection to Kalix service via Kalix CLI
+Proxy connection to Kalix service via Kalix CLI
 ```
 kalix service proxy loan-application-java
 ```
@@ -191,4 +191,109 @@ curl -XGET http://localhost:8080/loanapp/1 -H "Content-Type: application/json"
 Approve:
 ```
 curl -XPOST http://localhost:8080/loanapp/1/approve -H "Content-Type: application/json"
+```
+
+# Loan application processing service
+## Create loan application processing packages
+Create package `io.kx.loanproc` in `main` and `test` <br>
+## Define persistence (domain)`
+1. Create interface `io.kx.loanproc.LoanProcDomain`
+2. Create enum `LoanProcDomainStatus` in interface `io.kx.loanproc.LoanProcDomain`
+3. Create Java Record `LoanProcDomainState` in interface `io.kx.loanproc.LoanProcDomain` and add parameters
+4. Create Java Interface `LoanProcDomainEvent` interface `io.kx.loanproc.LoanProcDomain` and add Java records for events `ReadyForReview`, `Approved`, `Declined` and `TypeName` annotations for not using class names
+5. In `LoanAppDomainState` Java Record implement `empty`, `onReadyForReview`, `onApproved` and `onDeclined` methods
+
+<i><b>Tip</b></i>: Check content in `loan-proc-step-2` git branch
+
+## Define API data structure and endpoints
+1. Create Java Interface `LoanProcApi` and add Java Records for requests and responses
+3. Create class `LoanProcEntity` extending `EventSourcedEntity<LoanProcDomain.LoanProcDomainState, LoanProcDomain.LoanProcDomainEvent>`
+   1. add class level annotations (event sourcing entity configuration):
+   ```
+   @Id("loanAppId")
+   @TypeId("loanproc")
+   @RequestMapping("/loanproc/{loanAppId}")
+   ```
+   2. add class level annotations (path prefix):
+   ```
+   @RequestMapping("/loanproc/{loanAppId}")
+   ```
+   3. Override `emptyState` and return `LoanProcDomain.LoanProcDomainState.empty()`, set loanAppId via `EventSourcedEntityContext` injected through the constructor
+   4. Implement each request method and event handlers and annotate with `@EventHandler`
+
+<i><b>Tip</b></i>: Check content in `loan-proc-step-2` git branch
+
+
+## Implement unit test
+1. Create  package `io.kx.loanproc` in `src/test/java` <br>
+2. Create  `io.kx.loanproc.LoanProcEntityTest` class<br>
+3. Implement `happyPath`
+   <i><b>Tip</b></i>: Check content in `loan-proc-step-2` git branch
+
+## Run unit test
+```
+mvn test
+```
+## Implement integration test
+1. Edit `io.kx.loanproc.IntegrationTest` class<br>
+3. Implement `happyPath`
+   <i><b>Tip</b></i>: Check content in `loan-proc-step-2` git branch
+
+## Run integration test
+```
+mvn -Pit verify
+```
+
+<i><b>Note</b></i>: Integration tests uses [TestContainers](https://www.testcontainers.org/) to span integration environment so it could require some time to download required containers.
+Also make sure docker is running.
+
+## Run locally
+Start the service and kalix proxy:
+
+```
+mvn kalix:runAll
+```
+
+## Test service locally
+Start processing:
+```
+curl -XPOST http://localhost:9000/loanproc/1/process -H "Content-Type: application/json"
+```
+
+Get loan processing:
+```
+curl -XGET http://localhost:9000/loanproc/1 -H "Content-Type: application/json"
+```
+Approve:
+```
+curl -XPOST -d '{"reviewerId":"9999"}' http://localhost:9000/loanproc/1/approve -H "Content-Type: application/json"
+```
+### Re-Deploy
+```
+mvn deploy kalix:deploy
+```
+```
+kalix service list
+NAME                    AGE   INSTANCES   STATUS             IMAGE TAG                     
+loan-application-java   32m   1           UpdateInProgress   1.0-SNAPSHOT
+```
+## Test service in production
+Proxy connection to Kalix service via Kalix CLI
+```
+kalix service proxy loan-application-java
+```
+Proxy Kalix CLI command will expose service proxy connection on `localhost:8080` <br>
+
+Start processing:
+```
+curl -XPOST http://localhost:8080/loanproc/1/process -H "Content-Type: application/json"
+```
+
+Get loan processing:
+```
+curl -XGET http://localhost:8080/loanproc/1 -H "Content-Type: application/json"
+```
+Approve:
+```
+curl -XPOST -d '{"reviewerId":"9999"}' http://localhost:8080/loanproc/1/approve -H "Content-Type: application/json"
 ```
