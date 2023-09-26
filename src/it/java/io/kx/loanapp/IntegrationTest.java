@@ -1,9 +1,7 @@
 package io.kx.loanapp;
 
 import io.kx.Main;
-import io.kx.loanproc.LoanProcApi;
-import io.kx.loanproc.LoanProcDomain;
-import io.kx.loanproc.LoanProcEntity;
+import io.kx.loanproc.*;
 import kalix.javasdk.client.ComponentClient;
 import kalix.spring.testkit.KalixIntegrationTestKitSupport;
 import org.junit.jupiter.api.Test;
@@ -11,11 +9,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -83,5 +84,34 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
     getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
 
     assertEquals(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED,getRes.state().status());
+  }
+
+  public void loanProcHappyPathWithView() throws Exception {
+    var loanAppId = UUID.randomUUID().toString();
+    var reviewerId = "99999";
+
+    logger.info("Sending process...");
+    LoanProcApi.EmptyResponse emptyRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::process).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+
+    assertEquals(LoanProcApi.EmptyResponse.of(),emptyRes);
+
+    logger.info("Sending get...");
+    LoanProcApi.GetResponse getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanProcDomain.LoanProcDomainStatus.STATUS_READY_FOR_REVIEW, getRes.state().status());
+
+    logger.info("Sending approve...");
+    emptyRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::approve).params(new LoanProcApi.ApproveRequest(reviewerId)).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanProcApi.EmptyResponse.of(),emptyRes);
+
+    logger.info("Sending get...");
+    getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED,getRes.state().status());
+
+    Flux<LoanProcViewModel.ViewRecord> viewRecordFlux =
+            componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
+
+    List<LoanProcViewModel.ViewRecord> viewResList = viewRecordFlux.collectList().block(timeout);
+
+    assertTrue(!viewResList.stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
   }
 }
