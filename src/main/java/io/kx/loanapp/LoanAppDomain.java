@@ -34,7 +34,7 @@ public interface LoanAppDomain {
         }
     }
     interface LoanAppDomainEvent {
-        @TypeName("submitted")
+        @TypeName("app_submitted")
         record Submitted(String loanAppId,
                          String clientId,
                          Integer clientMonthlyIncomeCents,
@@ -42,9 +42,9 @@ public interface LoanAppDomain {
                          Integer loanDurationMonths,
                          Instant timestamp) implements LoanAppDomainEvent {}
 
-        @TypeName("approved")
+        @TypeName("app_approved")
         record Approved(String loanAppId, Instant timestamp) implements LoanAppDomainEvent {}
-        @TypeName("declined")
+        @TypeName("app_declined")
         record Declined(String loanAppId, String reason, Instant timestamp) implements LoanAppDomainEvent {}
     }
 }

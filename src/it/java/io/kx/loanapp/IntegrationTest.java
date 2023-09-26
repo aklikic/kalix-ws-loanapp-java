@@ -1,9 +1,11 @@
 package io.kx.loanapp;
 
 import io.kx.Main;
+import io.kx.loanproc.LoanProcApi;
+import io.kx.loanproc.LoanProcDomain;
+import io.kx.loanproc.LoanProcEntity;
 import kalix.javasdk.client.ComponentClient;
 import kalix.spring.testkit.KalixIntegrationTestKitSupport;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,5 +59,29 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
     getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanAppEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
 
     assertEquals(LoanAppDomain.LoanAppDomainStatus.STATUS_APPROVED,getRes.state().status());
+  }
+
+  @Test
+  public void loanProcHappyPath() throws Exception {
+    var loanAppId = UUID.randomUUID().toString();
+    var reviewerId = "99999";
+
+    logger.info("Sending process...");
+    LoanProcApi.EmptyResponse emptyRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::process).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+
+    assertEquals(LoanProcApi.EmptyResponse.of(),emptyRes);
+
+    logger.info("Sending get...");
+    LoanProcApi.GetResponse getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanProcDomain.LoanProcDomainStatus.STATUS_READY_FOR_REVIEW, getRes.state().status());
+
+    logger.info("Sending approve...");
+    emptyRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::approve).params(new LoanProcApi.ApproveRequest(reviewerId)).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanProcApi.EmptyResponse.of(),emptyRes);
+
+    logger.info("Sending get...");
+    getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanProcEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+
+    assertEquals(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED,getRes.state().status());
   }
 }
