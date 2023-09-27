@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(classes = Main.class)
 public class IntegrationTest extends KalixIntegrationTestKitSupport {
   private static Logger logger = LoggerFactory.getLogger(IntegrationTest.class);
-  @Autowired
 
   @Test
   public void loanAppHappyPath() throws Exception {
