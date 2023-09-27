@@ -418,3 +418,23 @@ mvn -Pit verify
 ```
 mvn deploy kalix:deploy
 ```
+# Action as a controller (API gateway)
+## Action
+1. Create `io.kx.loanapp.LoanAppGatewayAction` class extending `Action`
+2. add class level annotations (path prefix):
+   ```
+   @RequestMapping("/loanapp-gw")
+   ```
+3. add `submit` method
+   <i><b>Tip</b></i>: Check content in `controller-action-step-6` git branch
+## Integration test
+Add new test case `endToEndHappyPathWithGw` and use `loanapp-gw` instead of `loanapp` for submitting. Set `loanAppId` from the response.<br>
+<i><b>Tip</b></i>: Check content in `controller-action-step-6` git branch
+## Run integration test
+```
+mvn -Pit verify
+```
+## Package & Deploy
+```
+mvn deploy kalix:deploy
+```

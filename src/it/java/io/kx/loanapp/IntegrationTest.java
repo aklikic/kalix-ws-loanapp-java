@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(classes = Main.class)
 public class IntegrationTest extends KalixIntegrationTestKitSupport {
   private static Logger logger = LoggerFactory.getLogger(IntegrationTest.class);
-  @Autowired
 
   @Test
   public void loanAppHappyPath() throws Exception {
@@ -106,7 +105,7 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
     LoanProcViewModel.ViewRecordList viewResList =
             componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
 
-    assertTrue(!viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(loanAppId)).findFirst().isPresent());
   }
   @Test
   public void endToEndHappyPath() throws Exception {
@@ -137,6 +136,38 @@ public class IntegrationTest extends KalixIntegrationTestKitSupport {
 
     logger.info("Sending get...");
     LoanAppApi.GetResponse getRes = componentClient.forEventSourcedEntity(loanAppId).call(LoanAppEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanAppDomain.LoanAppDomainStatus.STATUS_APPROVED,getRes.state().status());
+  }
+
+  @Test
+  public void endToEndHappyPathWithGw() throws Exception {
+    var reviewerId = "99999";
+    var submitRequest = new LoanAppApi.SubmitRequest(
+            "clientId",
+            5000,
+            2000,
+            36);
+    logger.info("Sending submit...");
+    LoanAppApi.GetResponse appGetRes = componentClient.forAction().call(LoanAppGatewayAction::submit).params(submitRequest).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
+    assertEquals(LoanAppDomain.LoanAppDomainStatus.STATUS_IN_REVIEW,appGetRes.state().status());
+
+    Thread.sleep(2000);
+
+    LoanProcViewModel.ViewRecordList viewResList =
+            componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_READY_FOR_REVIEW.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(appGetRes.state().loanAppId())).findFirst().isPresent());
+
+    Thread.sleep(1000);
+    LoanProcApi.EmptyResponse procEmptyRes = componentClient.forEventSourcedEntity(appGetRes.state().loanAppId()).call(LoanProcEntity::approve).params(new LoanProcApi.ApproveRequest(reviewerId)).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
+    assertEquals(LoanProcApi.EmptyResponse.of(),procEmptyRes);
+
+    Thread.sleep(2000);
+
+    viewResList = componentClient.forView().call(LoanProcByStatusView::getLoanProcByStatus).params(new LoanProcViewModel.ViewRequest(LoanProcDomain.LoanProcDomainStatus.STATUS_APPROVED.name())).execute().toCompletableFuture().get(3, TimeUnit.SECONDS);
+    assertTrue(viewResList.list().stream().filter(vr -> vr.loanAppId().equals(appGetRes.state().loanAppId())).findFirst().isPresent());
+
+    logger.info("Sending get...");
+    LoanAppApi.GetResponse getRes = componentClient.forEventSourcedEntity(appGetRes.state().loanAppId()).call(LoanAppEntity::get).execute().toCompletableFuture().get(3,TimeUnit.SECONDS);
     assertEquals(LoanAppDomain.LoanAppDomainStatus.STATUS_APPROVED,getRes.state().status());
   }
 
