@@ -9,11 +9,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
+
 @Table("loanproc_by_status")
 public class LoanProcByStatusView extends View<LoanProcViewModel.ViewRecord> {
     @PostMapping("/loanproc/views/by-status")
-    @Query("SELECT * FROM loanproc_by_status WHERE statusId = :statusId")
-    public Flux<LoanProcViewModel.ViewRecord> getLoanProcByStatus(@RequestBody LoanProcViewModel.ViewRequest request){
+    @Query("SELECT * as list FROM loanproc_by_status WHERE statusId = :statusId")
+    public LoanProcViewModel.ViewRecordList getLoanProcByStatus(@RequestBody LoanProcViewModel.ViewRequest request){
         return null;
     }
 
