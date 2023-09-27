@@ -388,6 +388,15 @@ curl -XGET http://localhost:8080/loanapp/3 -H "Content-Type: application/json"
 ```
 
 # Timers
+## Creating config
+1. Create class `io.kx.loanproc.LoanProcConfig`
+2. Add class level annotation:
+```
+@Configuration
+@ConfigurationProperties(prefix = "loanproc")
+```
+3. Add parameter `Integer timeoutMillis` with getter and setter
+4. In `src/main/resources/application.properties` add `loanproc.timeoutMillis = 600000`
 ## Action for managing timer for timeout
 1. Create `io.kx.loanproc.LoanProcTimeoutAction` class extending `Action`
 2. Add class level annotation `@Subscribe.EventSourcedEntity(value = LoanProcEntity.class, ignoreUnknown = true)`
@@ -397,7 +406,9 @@ curl -XGET http://localhost:8080/loanapp/3 -H "Content-Type: application/json"
 
 <i><b>Tip</b></i>: Check content in `timers-step-5` git branch
 ## Create integration tests for eventing (end-to-end test)
-Update `io.kx.IntegrationTest` and add `endToEndProcessingDeclinedByTimeout` test
+1. Create folder `src/it/resources`
+2. Create file `src/it/resources/test-application.properties` and add `loanproc.timeoutMillis = 1000`
+3. Create a new integration test class `io.kx.TimerIntegrationTest`.
 <i><b>Tip</b></i>: Check content in `timers-step-5` git branch
 ## Run integration test
 ```
